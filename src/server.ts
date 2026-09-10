@@ -358,6 +358,64 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ entityId }) => call(() => shruwd.entities.remove(entityId)),
   );
 
+  // ── Discovery ─────────────────────────────────────────────────────────
+
+  server.registerTool(
+    'shruwd_list_suggestions',
+    {
+      title: 'List competitor suggestions',
+      description:
+        'Names the AI answers use that the brand does not track yet — the products a person would ' +
+        'recognise as competitors but never added. Each comes with the share of answers that named ' +
+        'it (e.g. 0.34 = in 34% of a prompt cluster\'s responses) and, when the answers linked it, ' +
+        'its domain. Review them with the user: accept the real competitors (they then count in ' +
+        'share of voice), dismiss the rest. Suggestions appear only after a measurement cycle has ' +
+        'closed.',
+      inputSchema: { brandId, state: z.enum(['open', 'accepted', 'dismissed', 'all']).optional() },
+      annotations: READ,
+    },
+    ({ brandId, state }) => call(() => shruwd.suggestions.list(brandId, state ?? 'open')),
+  );
+
+  server.registerTool(
+    'shruwd_accept_suggestion',
+    {
+      title: 'Accept a suggestion as a competitor',
+      description:
+        'Turns a suggestion into a tracked competitor, with exactly the rules of shruwd_add_competitor: ' +
+        'exact aliases only, and a short or common-word name is refused until contextTerms are given. ' +
+        'The name and the linked domain are prefilled from the suggestion; pass aliases, domains, ' +
+        'exclusions or contextTerms to adjust. Confirm with the user before accepting.',
+      inputSchema: {
+        suggestionId: z.string().min(1),
+        name: z.string().min(1).max(120).optional().describe('Override the suggested name.'),
+        ...entityConfig,
+      },
+      annotations: WRITE,
+    },
+    ({ suggestionId, name, aliases, domains, exclusions, contextTerms }) =>
+      call(() =>
+        shruwd.suggestions.accept(suggestionId, {
+          ...(name !== undefined ? { name } : {}),
+          ...(aliases !== undefined ? { aliases } : {}),
+          ...(domains !== undefined ? { domains } : {}),
+          ...(exclusions !== undefined ? { exclusions } : {}),
+          ...(contextTerms !== undefined ? { contextTerms } : {}),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    'shruwd_dismiss_suggestion',
+    {
+      title: 'Dismiss a suggestion',
+      description: 'Not a competitor. Quiet for ninety days; suggested again only if the answers still name it.',
+      inputSchema: { suggestionId: z.string().min(1) },
+      annotations: WRITE,
+    },
+    ({ suggestionId }) => call(() => shruwd.suggestions.dismiss(suggestionId)),
+  );
+
   // ── Measurement ───────────────────────────────────────────────────────
 
   server.registerTool(
