@@ -575,10 +575,12 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       title: 'Create log-drain token',
       description:
         'Mints the token the brand\'s server sends its access logs with, and returns the endpoint to ' +
-        'POST them to. The token is shown once and never again; previous tokens are revoked. Give the ' +
-        'user the token and endpoint verbatim — they paste both into their log shipper (Cloudflare ' +
-        'Logpush, Vercel Log Drain, or a small forwarder). Logs power the crawler view and the ' +
-        'highest-confidence findings.',
+        'POST them to plus a `setup` object with three routes: an HTTP log drain (Vercel, Netlify, ' +
+        'Fly), a Cloudflare Logpush HTTP destination (Enterprise zones; the destinationUrl embeds the ' +
+        'token), or the reference forwarder Worker (any other Cloudflare plan or CDN-served site). ' +
+        'The token is shown once and never again; previous tokens are revoked. Ask which platform the ' +
+        'site runs on, then give the user that route\'s values verbatim. Logs power the crawler view ' +
+        'and the highest-confidence findings.',
       inputSchema: { brandId, label: z.string().max(80).optional() },
       annotations: WRITE,
     },
