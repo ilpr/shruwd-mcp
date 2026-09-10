@@ -1,0 +1,36 @@
+{
+  "name": "shruwd-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Shruwd: lets an AI agent set up a brand, read its AI-search visibility, and act on diagnostic findings.",
+  "keywords": ["mcp", "model context protocol", "shruwd", "ai search", "ai overviews", "chatgpt"],
+  "homepage": "https://shruwd.io",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "shruwd-mcp": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@shruwd/sdk": "*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
