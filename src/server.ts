@@ -34,6 +34,10 @@ const engine = z
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 
+const windowDays = z
+  .union([z.literal(7), z.literal(30), z.literal(90)])
+  .describe('The rolling window in days that each point describes. Defaults to 30.');
+
 const intent = z
   .enum(['informational', 'comparison', 'commercial', 'navigational', 'problem'])
   .describe(
@@ -175,6 +179,31 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     },
     ({ name, domain, timezone }) =>
       call(() => shruwd.brands.create({ name, domain, ...(timezone !== undefined ? { timezone } : {}) })),
+  );
+
+  server.registerTool(
+    'shruwd_update_brand',
+    {
+      title: 'Update brand',
+      description:
+        'Renames a brand or changes its timezone. The name is for display; matching uses the self ' +
+        "entity's aliases (shruwd_set_entity). The timezone moves the day boundary for cycles and " +
+        'rollups from the next cycle on. The domain cannot change: it defines the self entity, so a new ' +
+        'domain is a new brand.',
+      inputSchema: {
+        brandId,
+        name: z.string().min(1).max(120).optional(),
+        timezone: z.string().optional().describe('IANA zone.'),
+      },
+      annotations: WRITE,
+    },
+    ({ brandId, name, timezone }) =>
+      call(() =>
+        shruwd.brands.update(brandId, {
+          ...(name !== undefined ? { name } : {}),
+          ...(timezone !== undefined ? { timezone } : {}),
+        }),
+      ),
   );
 
   server.registerTool(
@@ -469,6 +498,37 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       call(() =>
         shruwd.visibility.get(brandId, {
           ...(engine !== undefined ? { engine } : {}),
+          ...(from !== undefined ? { from } : {}),
+          ...(to !== undefined ? { to } : {}),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    'shruwd_get_visibility_series',
+    {
+      title: 'Get visibility over time',
+      description:
+        'The window metric at every cycle close in a range (default: the last ninety days, 30-day window): ' +
+        'for the brand and each competitor, mention rate and share of voice per close, each a ' +
+        '{state: "ok", point, lo, hi, n} metric or an explicit non-number. Use it to answer "is this ' +
+        'changing" — but two points whose intervals overlap have NOT moved, and a change across a ' +
+        '"modelChanges" entry may be the provider\'s model rather than the brand (the comparison is ' +
+        'confounded). "series" is index-aligned with "points"; null means no rollup row for that close.',
+      inputSchema: {
+        brandId,
+        engine: engine.optional(),
+        window: windowDays.optional(),
+        from: day.optional(),
+        to: day.optional(),
+      },
+      annotations: READ,
+    },
+    ({ brandId, engine, window, from, to }) =>
+      call(() =>
+        shruwd.visibility.series(brandId, {
+          ...(engine !== undefined ? { engine } : {}),
+          ...(window !== undefined ? { window } : {}),
           ...(from !== undefined ? { from } : {}),
           ...(to !== undefined ? { to } : {}),
         }),

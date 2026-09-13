@@ -50,11 +50,11 @@ claude mcp add shruwd -e SHRUWD_API_KEY=sh_live_… -- npx -y shruwd-mcp
 | Tool | Does |
 |---|---|
 | `shruwd_get_workspace` | Plan, entitlements, usage, brands. Start here. |
-| `shruwd_list_brands` · `shruwd_get_brand` · `shruwd_create_brand` · `shruwd_archive_brand` | Brands. Creating one also creates its self entity and first measurement. |
+| `shruwd_list_brands` · `shruwd_get_brand` · `shruwd_create_brand` · `shruwd_update_brand` · `shruwd_archive_brand` | Brands. Creating one also creates its self entity and first measurement. |
 | `shruwd_list_prompts` · `shruwd_add_prompts` · `shruwd_update_prompt` · `shruwd_remove_prompt` | The questions asked of each engine every cycle. |
 | `shruwd_list_entities` · `shruwd_add_competitor` · `shruwd_set_entity` · `shruwd_remove_entity` | The brand and its competitors, with the exact aliases that count as a mention. |
 | `shruwd_run_measurement` · `shruwd_list_cycles` | Measure now; watch the cycle. Results arrive over the following hours. |
-| `shruwd_get_visibility` · `shruwd_get_crawlers` | Mention rate and share of voice with intervals; verified AI-crawler activity. |
+| `shruwd_get_visibility` · `shruwd_get_visibility_series` · `shruwd_get_crawlers` | Mention rate and share of voice with intervals, now and at every cycle close; verified AI-crawler activity. |
 | `shruwd_list_findings` · `shruwd_get_finding` · `shruwd_transition_finding` | Diagnoses with a specific fix; mark a fix applied to start the recheck. |
 | `shruwd_create_ingest_token` | The token and endpoint for shipping server logs. |
 

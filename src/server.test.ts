@@ -83,6 +83,7 @@ describe('shruwd-mcp', () => {
         'shruwd_get_crawlers',
         'shruwd_get_finding',
         'shruwd_get_visibility',
+        'shruwd_get_visibility_series',
         'shruwd_get_workspace',
         'shruwd_list_brands',
         'shruwd_list_cycles',
@@ -95,6 +96,7 @@ describe('shruwd-mcp', () => {
         'shruwd_run_measurement',
         'shruwd_set_entity',
         'shruwd_transition_finding',
+        'shruwd_update_brand',
         'shruwd_update_prompt',
       ].sort(),
     );
