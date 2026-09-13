@@ -603,6 +603,42 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
   );
 
   server.registerTool(
+    'shruwd_suggest_setup',
+    {
+      title: 'Suggest prompts and competitors',
+      description:
+        "Reads the brand's homepage and drafts ten prompts and up to six competitors. Nothing is saved to the " +
+        'brand: show the draft to the user, then add the prompts they keep with shruwd_add_prompts and each ' +
+        'competitor they confirm with shruwd_add_competitor. Returns the stored draft when one exists unless ' +
+        'regenerate is true. Three drafts per brand per day; a new draft can take up to a minute.',
+      inputSchema: {
+        brandId,
+        regenerate: z.boolean().optional().describe('Replace the stored draft with a new one.'),
+      },
+      annotations: WRITE,
+    },
+    ({ brandId, regenerate }) =>
+      call(() => shruwd.setup.suggest(brandId, regenerate === undefined ? {} : { regenerate })),
+  );
+
+  server.registerTool(
+    'shruwd_list_answers',
+    {
+      title: 'List latest answers',
+      description:
+        'The latest individual AI answers for the brand, newest first: the prompt, the engine, whether the brand ' +
+        'was named and at what rank, the competitors named and the pages cited. Evidence, not a metric: never ' +
+        'compute a rate from these; use shruwd_get_visibility, which withholds numbers below ten answers.',
+      inputSchema: {
+        brandId,
+        limit: z.number().int().min(1).max(50).optional().describe('How many answers. Defaults to 10.'),
+      },
+      annotations: READ,
+    },
+    ({ brandId, limit }) => call(() => shruwd.answers.list(brandId, limit)),
+  );
+
+  server.registerTool(
     'shruwd_get_finding',
     {
       title: 'Get finding',

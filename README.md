@@ -55,6 +55,8 @@ claude mcp add shruwd -e SHRUWD_API_KEY=sh_live_… -- npx -y shruwd-mcp
 | `shruwd_list_entities` · `shruwd_add_competitor` · `shruwd_set_entity` · `shruwd_remove_entity` | The brand and its competitors, with the exact aliases that count as a mention. |
 | `shruwd_run_measurement` · `shruwd_list_cycles` | Measure now; watch the cycle. Results arrive over the following hours. |
 | `shruwd_get_visibility` · `shruwd_get_visibility_series` · `shruwd_get_crawlers` | Mention rate and share of voice with intervals, now and at every cycle close; verified AI-crawler activity. |
+| `shruwd_list_answers` | The latest individual answers: whether the brand was named and at what rank, the competitors named, the pages cited. Evidence, not a metric. |
+| `shruwd_suggest_setup` | Drafts ten prompts and up to six competitors from the homepage. Nothing is saved until they are added with the usual tools. |
 | `shruwd_list_findings` · `shruwd_get_finding` · `shruwd_transition_finding` | Diagnoses with a specific fix; mark a fix applied to start the recheck. |
 | `shruwd_create_ingest_token` | The token and endpoint for shipping server logs. |
 
