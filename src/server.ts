@@ -26,7 +26,15 @@ export const SERVER_VERSION = '0.1.0';
 const brandId = z
   .string()
   .min(1)
-  .describe('Brand id, from shruwd_get_workspace, shruwd_list_brands or shruwd_create_brand.');
+  .describe(
+    'Brand id or slug, from shruwd_get_workspace, shruwd_list_brands or shruwd_create_brand. ' +
+      'The slug is the segment in the dashboard URL (/brands/{slug}).',
+  );
+
+const findingId = z
+  .string()
+  .min(1)
+  .describe('Finding id, or its number — the one shown in the dashboard and in its URL.');
 
 const engine = z
   .enum(['google_aio', 'chatgpt'])
@@ -599,7 +607,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     {
       title: 'Get finding',
       description: 'One finding with its full evidence, recommendation, and the history of state changes.',
-      inputSchema: { findingId: z.string().min(1) },
+      inputSchema: { findingId },
       annotations: READ,
     },
     ({ findingId }) => call(() => shruwd.findings.get(findingId)),
@@ -617,7 +625,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'of those states can be set here, and rechecking sooner measures nothing. Do not mark fix_applied ' +
         'until the change is actually deployed; the baseline is taken at that moment.',
       inputSchema: {
-        findingId: z.string().min(1),
+        findingId,
         to: z.enum(['acknowledged', 'fix_applied', 'dismissed']),
         note: z.string().max(2000).optional().describe('What was done, for the record.'),
       },
