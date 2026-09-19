@@ -38,7 +38,7 @@ const findingId = z
 
 const engine = z
   .enum(['google_aio', 'chatgpt'])
-  .describe('google_aio = Google AI Overviews / AI Mode; chatgpt = ChatGPT. Defaults to google_aio.');
+  .describe('google_aio = Google AI Overviews; chatgpt = ChatGPT. Defaults to google_aio. Google AI Mode is not tracked.');
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 
@@ -120,12 +120,15 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
       instructions:
-        'Shruwd measures how a brand appears in AI-generated answers (Google AI Overviews / AI Mode, ' +
+        'Shruwd measures how a brand appears in AI-generated answers (Google AI Overviews and ' +
         'ChatGPT), diagnoses why it is or is not cited, recommends a specific fix, and re-checks whether ' +
         'the fix moved anything. Start with shruwd_get_workspace. Measurement is asynchronous: creating a ' +
         'brand or running a measurement schedules work whose results arrive over the following hours. ' +
         'Every metric is either a point estimate with a 95% interval and n, or an explicit ' +
-        '"insufficient_data" / "undefined" state. insufficient_data is not zero — never report it as a number.',
+        '"insufficient_data" / "undefined" state. insufficient_data is not zero — never report it as a number. ' +
+        'The key is bound to one workspace and acts with its holder\'s role there: reads need viewer, writes ' +
+        'editor, creating or archiving a brand owner, minting an ingest token admin. Refusals are 403 ' +
+        'not_a_member and 403 insufficient_role.',
     },
   );
 
@@ -136,8 +139,11 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     {
       title: 'Get workspace',
       description:
-        'The plan, the entitlements in force (brand and prompt limits, engines, cadence, history window, ' +
-        'rechecks per month), usage against the period allowance, and the brands. Call this first.',
+        'The plan, the entitlements in force (brands, the workspace-wide prompt pool, members, engines, ' +
+        'cadence, history window, rechecks per month, and maxVisibleFindings — how many findings the plan ' +
+        'shows in full), usage against the period allowance including activePrompts against ' +
+        'promptsAllowance, the caller\'s role in this workspace, and the brands. Call this first: the role ' +
+        'decides which of these tools are allowed.',
       annotations: READ,
     },
     () => call(() => shruwd.workspace.get()),
@@ -177,16 +183,27 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'tier. The response says which engines the plan measures and whether a first cycle was planted. ' +
         'On the free tier "snapshot" is "planned" or "already_taken": a domain gets one free measurement ' +
         'ever, across all accounts. Add prompts and competitors right after; the first cycle runs within ' +
-        'fifteen minutes and measures whatever prompts exist then.',
+        'fifteen minutes and measures whatever prompts exist then. The name is the brand\'s own first ' +
+        'alias, so a short (six characters or fewer) or common-word name is refused with ' +
+        'context_terms_required until contextTerms are given, as for a competitor. Requires the owner ' +
+        'role: a key held by an editor or admin is refused with 403 insufficient_role.',
       inputSchema: {
         name: z.string().min(1).max(120),
         domain: z.string().min(1).describe('Host or URL; reduced to the registrable domain (www.x.com/p → x.com).'),
         timezone: z.string().optional().describe('IANA zone for day boundaries. Defaults to UTC.'),
+        contextTerms: entityConfig.contextTerms,
       },
       annotations: WRITE,
     },
-    ({ name, domain, timezone }) =>
-      call(() => shruwd.brands.create({ name, domain, ...(timezone !== undefined ? { timezone } : {}) })),
+    ({ name, domain, timezone, contextTerms }) =>
+      call(() =>
+        shruwd.brands.create({
+          name,
+          domain,
+          ...(timezone !== undefined ? { timezone } : {}),
+          ...(contextTerms !== undefined ? { contextTerms } : {}),
+        }),
+      ),
   );
 
   server.registerTool(
@@ -218,7 +235,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     'shruwd_archive_brand',
     {
       title: 'Archive brand',
-      description: 'Archives a brand. Nothing is deleted; scheduling stops and history stays. Ask before using this.',
+      description:
+        'Archives a brand. Nothing is deleted; scheduling stops and history stays. Requires the owner ' +
+        'role: a key held by an editor or admin is refused with 403 insufficient_role. Ask before using this.',
       inputSchema: { brandId },
       annotations: REMOVE,
     },
@@ -262,8 +281,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       description:
         'Adds prompts — the questions asked of each engine every cycle. Write them the way a buyer would ' +
         'type them, without the brand name unless the intent is navigational. 1–500 characters each. ' +
-        'The batch is atomic: if it would exceed the plan\'s prompts-per-brand, nothing is added and the ' +
-        'error carries limit, current and submitted.',
+        'The batch is atomic: if it would exceed the plan\'s prompt allowance — one pool shared across ' +
+        'every brand in the workspace, not a per-brand limit — nothing is added and the error carries ' +
+        'limit, current and submitted.',
       inputSchema: {
         brandId,
         prompts: z
@@ -460,9 +480,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     {
       title: 'Run a measurement',
       description:
-        'Schedules a measurement cycle now: every active prompt, on every entitled engine, three times ' +
-        'each. It is picked up within fifteen minutes and completes over the following hours; this ' +
-        'response contains only the cycle id. Watch it with shruwd_list_cycles, then read ' +
+        'Schedules a measurement cycle now: every active prompt, on every entitled engine, repeated as ' +
+        'the plan sets (three times on weekly plans, once for the free snapshot). It starts at once and ' +
+        'completes over the following day; this response contains only the cycle id. Watch it with shruwd_list_cycles, then read ' +
         'shruwd_get_visibility and shruwd_list_findings. A cycle spends the period\'s run allowance ' +
         '(see shruwd_get_workspace); weekly plans already run one per week, so use this for a first ' +
         'read or after a change worth measuring. On the free tier it is the single free measurement.',
@@ -551,9 +571,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'Which AI crawlers fetched the brand\'s site, from its server logs, over a window. verifiedHits ' +
         'were confirmed against the vendor\'s published IP ranges; unverifiedHits merely claimed the ' +
         'user-agent, which anyone can send. Only verified hits are a signal, and the two are never ' +
-        'summed. "live_retrieval" bots fetch pages to answer a question now and correlate with being ' +
-        'cited; "training" crawlers do not. "coverage" says whether log ingest has been continuous — if ' +
-        'not, an absence of hits means nothing.',
+        'summed. "live_retrieval" bots fetch pages to answer a question now, so a page they cannot fetch ' +
+        'cannot be cited in those answers; "training" crawlers collect pages for model training. ' +
+        '"coverage" says whether log ingest has been continuous — if not, an absence of hits means nothing.',
       inputSchema: { brandId, from: day.optional(), to: day.optional() },
       annotations: READ,
     },
@@ -578,7 +598,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'measured from first-party data; "inferred" follows a reliable pattern; "heuristic" is a ' +
         'plausible cause that could not be confirmed — treat it as a hypothesis, not a fact. By default ' +
         'the open, acknowledged, fix_applied and rechecking findings; pass states to change that. ' +
-        '"queued" counts open findings held back by the weekly cap.',
+        '"queued" counts open findings held back by the weekly cap. On plans that cap visible findings, ' +
+        '"locked" counts the rest by severity: they exist and are not returned. When locked.count is above ' +
+        'zero, never present the returned findings as the complete set — say how many are withheld.',
       inputSchema: {
         brandId,
         states: z
@@ -642,7 +664,10 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     'shruwd_get_finding',
     {
       title: 'Get finding',
-      description: 'One finding with its full evidence, recommendation, and the history of state changes.',
+      description:
+        'One finding with its full evidence, recommendation, and the history of state changes. A finding ' +
+        'the plan does not show in full — one counted in a findings list\'s "locked" — is refused with ' +
+        '403 not_entitled: it exists, the plan withholds it.',
       inputSchema: { findingId },
       annotations: READ,
     },
@@ -655,11 +680,14 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       title: 'Transition finding',
       description:
         'Moves a finding: "acknowledged" (seen), "fix_applied" (the recommended change is live), or ' +
-        '"dismissed". fix_applied captures a baseline of the affected prompts and starts a fourteen-day ' +
-        'clock; a recheck then measures again and the finding becomes "resolved" or "not_moved" ONLY if ' +
-        'the movement gates pass (non-overlapping intervals and at least five points of change). Neither ' +
-        'of those states can be set here, and rechecking sooner measures nothing. Do not mark fix_applied ' +
-        'until the change is actually deployed; the baseline is taken at that moment.',
+        '"dismissed". Order matters: an open finding must be acknowledged before fix_applied, or the ' +
+        'call is refused with 409 invalid_transition. fix_applied captures a baseline of the affected ' +
+        'prompts and starts a fourteen-day clock; a recheck then measures again, and the finding becomes ' +
+        '"resolved" ONLY if the movement gates pass (non-overlapping intervals and at least five points of ' +
+        'change), else "not_moved". ACCESS findings are instead confirmed from the site\'s own logs, ' +
+        'robots.txt or page, with no wait and no recheck spent. Neither resolved nor not_moved can be ' +
+        'set here. Do not mark fix_applied until the change is actually deployed; the baseline is taken ' +
+        'at that moment. A finding withheld by the plan is refused with 403 not_entitled.',
       inputSchema: {
         findingId,
         to: z.enum(['acknowledged', 'fix_applied', 'dismissed']),
@@ -684,7 +712,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'token), or the reference forwarder Worker (any other Cloudflare plan or CDN-served site). ' +
         'The token is shown once and never again; previous tokens are revoked. Ask which platform the ' +
         'site runs on, then give the user that route\'s values verbatim. Logs power the crawler view ' +
-        'and the highest-confidence findings.',
+        'and the highest-confidence findings. Requires the admin role: a key held by an editor or viewer ' +
+        'is refused with 403 insufficient_role.',
       inputSchema: { brandId, label: z.string().max(80).optional() },
       annotations: WRITE,
     },

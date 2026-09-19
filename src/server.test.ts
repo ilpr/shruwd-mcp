@@ -109,7 +109,8 @@ describe('shruwd-mcp', () => {
     expect(byName.get('shruwd_add_competitor')).toContain('contextTerms');
     expect(byName.get('shruwd_get_crawlers')).toContain('never summed');
     expect(byName.get('shruwd_transition_finding')).toContain('fourteen-day');
-    expect(byName.get('shruwd_run_measurement')).toContain('following hours');
+    expect(byName.get('shruwd_transition_finding')).toContain('must be acknowledged before fix_applied');
+    expect(byName.get('shruwd_run_measurement')).toContain('completes over the following day');
   });
 
   it('calls the API with the tool arguments and returns the response as JSON text', async () => {

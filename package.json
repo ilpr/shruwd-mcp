@@ -21,12 +21,13 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
-    "@shruwd/sdk": "*",
+    "@shruwd/sdk": "^0.1.0",
     "zod": "^3.24.0"
   },
   "devDependencies": {
