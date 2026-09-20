@@ -19,7 +19,9 @@ import { ShruwdError, type Shruwd } from '@shruwd/sdk';
 import { z } from 'zod';
 
 export const SERVER_NAME = 'shruwd';
-export const SERVER_VERSION = '0.1.1';
+// Keep in step with the `version` in package.json and server.json: it is the
+// version the MCP client sees, and the one the API meters the call under.
+export const SERVER_VERSION = '0.1.2';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
