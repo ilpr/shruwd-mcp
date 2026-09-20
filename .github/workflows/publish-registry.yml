@@ -1,0 +1,42 @@
+# Publishes this server's entry to the official MCP Registry.
+#
+# Lives here because this directory is the root of the public repo
+# (ilpr/shruwd-mcp), split out of the private monorepo with
+# `git subtree split --prefix=packages/mcp`. GitHub only reads workflows at a
+# repository root, so this file is inert in the monorepo and active there.
+#
+# Registry auth is OIDC — `login github-oidc` proves the io.github.ilpr/*
+# namespace from the workflow's own identity, so there is no token to store.
+# The registry then verifies ownership of the npm package by reading `mcpName`
+# out of the published tarball, which is why npm must be published FIRST;
+# otherwise this fails verification against whatever version is still latest.
+#
+# npm publishing is deliberately not here: it runs locally, where the npm
+# credentials already are, and keeps an npm token out of this repo entirely.
+name: Publish to MCP Registry
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish
