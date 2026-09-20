@@ -5,6 +5,14 @@
   "keywords": ["mcp", "model context protocol", "shruwd", "ai search", "ai overviews", "chatgpt"],
   "homepage": "https://shruwd.io",
   "license": "MIT",
+  "mcpName": "io.github.ilpr/shruwd-mcp",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ilpr/shruwd-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ilpr/shruwd-mcp/issues"
+  },
   "type": "module",
   "bin": {
     "shruwd-mcp": "./dist/cli.js"

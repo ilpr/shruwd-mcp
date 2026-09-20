@@ -1,0 +1,32 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ilpr/shruwd-mcp",
+  "description": "Set up a brand, read its AI-search visibility, and act on diagnostic findings.",
+  "version": "0.1.1",
+  "repository": {
+    "url": "https://github.com/ilpr/shruwd-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "shruwd-mcp",
+      "version": "0.1.1",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "SHRUWD_API_KEY",
+          "description": "API key minted in the Shruwd dashboard under Account -> API keys.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "SHRUWD_API_URL",
+          "description": "Override the API base URL. Defaults to https://shruwd.io/api/v1.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
