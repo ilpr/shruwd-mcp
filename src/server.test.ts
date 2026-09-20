@@ -5,11 +5,12 @@
  * error comes back as a tool error carrying the structured body — not the
  * API itself, which has its own tests.
  */
+import { readFile } from 'node:fs/promises';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Shruwd } from '@shruwd/sdk';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createShruwdMcpServer } from './server.js';
+import { createShruwdMcpServer, SERVER_VERSION } from './server.js';
 
 interface Recorded {
   readonly method: string;
@@ -188,5 +189,15 @@ describe('shruwd-mcp', () => {
     expect(api.calls[0]?.url).toBe(
       'https://example.test/api/v1/brands/b1/findings?states=resolved%2Cnot_moved&suppressed=1',
     );
+  });
+
+  it('reports the version it is published as', async () => {
+    // cli.ts sends this to the API as `shruwd-mcp/<version>`, which is what
+    // makes a tool call countable as one (api.md §1.2), and hands the same
+    // string to the MCP client as the server version.
+    const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version: string;
+    };
+    expect(SERVER_VERSION).toBe(pkg.version);
   });
 });

@@ -22,7 +22,13 @@ if (!apiKey) {
 }
 
 const baseUrl = process.env.SHRUWD_API_URL;
-const shruwd = new Shruwd({ apiKey, ...(baseUrl ? { baseUrl } : {}) });
+// `client` is what makes these calls countable as MCP rather than as any other
+// use of the SDK: the API meters the request as an `mcp_tool_call` (api.md §1.2).
+const shruwd = new Shruwd({
+  apiKey,
+  client: `shruwd-mcp/${SERVER_VERSION}`,
+  ...(baseUrl ? { baseUrl } : {}),
+});
 const server = createShruwdMcpServer(shruwd);
 
 await server.connect(new StdioServerTransport());
