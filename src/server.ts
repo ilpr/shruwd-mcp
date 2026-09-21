@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.2';
+export const SERVER_VERSION = '0.1.3';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -184,8 +184,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'the first measurement cycle. If the account has no workspace yet, one is created on the free ' +
         'tier. The response says which engines the plan measures and whether a first cycle was planted. ' +
         'On the free tier "snapshot" is "planned" or "already_taken": a domain gets one free measurement ' +
-        'ever, across all accounts. Add prompts and competitors right after; the first cycle runs within ' +
-        'fifteen minutes and measures whatever prompts exist then. The name is the brand\'s own first ' +
+        'ever, across all accounts. Add competitors first (shruwd_add_competitor), then every prompt in ' +
+        'one shruwd_add_prompts call: the first cycle starts within minutes of the first prompts and ' +
+        'measures only the prompts and competitors that exist then. The name is the brand\'s own first ' +
         'alias, so a short (six characters or fewer) or common-word name is refused with ' +
         'context_terms_required until contextTerms are given, as for a competitor. Requires the owner ' +
         'role: a key held by an editor or admin is refused with 403 insufficient_role.',
@@ -285,7 +286,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'type them, without the brand name unless the intent is navigational. 1–500 characters each. ' +
         'The batch is atomic: if it would exceed the plan\'s prompt allowance — one pool shared across ' +
         'every brand in the workspace, not a per-brand limit — nothing is added and the error carries ' +
-        'limit, current and submitted.',
+        'limit, current and submitted. On a new brand the first measurement starts within minutes of ' +
+        'the first prompts and covers only what exists then, so add its competitors before this and ' +
+        'every prompt in one call.',
       inputSchema: {
         brandId,
         prompts: z
@@ -367,7 +370,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'fewer) or a common English word ("Arc", "Linear", "Notion") is refused without contextTerms: ' +
         'those names appear in sentences that are not about the company. Give one or two category words ' +
         'as context terms ("waitlist", "crm") and the mention counts only when one appears nearby. ' +
-        'Include the competitor\'s domain so citations of it are attributed.',
+        'Include the competitor\'s domain so citations of it are attributed. On a new brand, add ' +
+        'competitors before any prompt: the first measurement starts as soon as prompts exist, and a ' +
+        'competitor added after it is not in it.',
       inputSchema: { brandId, name: z.string().min(1).max(120), ...entityConfig },
       annotations: WRITE,
     },
@@ -501,7 +506,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       description:
         'Recent measurement cycles, newest first, with state (pending, running, complete, partial, ' +
         'failed, skipped_quota) and run counts. "partial" means some runs failed; "skipped_quota" means ' +
-        'the allowance, the plan or billing stopped it.',
+        'the allowance, the plan or billing stopped it. On a weekly plan the newest is next week\'s ' +
+        'cycle, still pending: the newest that is not pending is the current measurement, and its ' +
+        'results are in once it is complete or partial.',
       inputSchema: { brandId, limit: z.number().int().min(1).max(100).optional() },
       annotations: READ,
     },
@@ -520,7 +527,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'not report it as a number, and do not compare two metrics whose intervals overlap as if one were ' +
         'higher. "asOf" is the day the numbers describe. "historyFrom" is set when the window was ' +
         'clamped to the plan\'s history. "modelIds" lists the provider models seen; a change there can ' +
-        'move metrics on its own.',
+        'move metrics on its own. engine defaults to google_aio: call once per engine the brand ' +
+        'measures (its engines) and report each separately.',
       inputSchema: { brandId, engine: engine.optional(), from: day.optional(), to: day.optional() },
       annotations: READ,
     },
@@ -632,9 +640,10 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       title: 'Suggest prompts and competitors',
       description:
         "Reads the brand's homepage and drafts ten prompts and up to six competitors. Nothing is saved to the " +
-        'brand: show the draft to the user, then add the prompts they keep with shruwd_add_prompts and each ' +
-        'competitor they confirm with shruwd_add_competitor. Returns the stored draft when one exists unless ' +
-        'regenerate is true. Three drafts per brand per day; a new draft can take up to a minute.',
+        'brand: show the draft to the user, then add each competitor they confirm with shruwd_add_competitor ' +
+        'and after that the prompts they keep, in one shruwd_add_prompts call. Returns the stored draft ' +
+        'when one exists unless regenerate is true. Three drafts per brand per day; a new draft can take ' +
+        'up to a minute.',
       inputSchema: {
         brandId,
         regenerate: z.boolean().optional().describe('Replace the stored draft with a new one.'),

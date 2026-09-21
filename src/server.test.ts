@@ -112,6 +112,12 @@ describe('shruwd-mcp', () => {
     expect(byName.get('shruwd_transition_finding')).toContain('fourteen-day');
     expect(byName.get('shruwd_transition_finding')).toContain('must be acknowledged before fix_applied');
     expect(byName.get('shruwd_run_measurement')).toContain('completes over the following day');
+    // The first measurement counts only the competitors that exist when it
+    // starts, and a visibility read is one engine (api.md §2.2, §2.5).
+    expect(byName.get('shruwd_create_brand')).toContain('Add competitors first');
+    expect(byName.get('shruwd_add_prompts')).toContain('add its competitors before this');
+    expect(byName.get('shruwd_add_competitor')).toContain('before any prompt');
+    expect(byName.get('shruwd_get_visibility')).toContain('engine defaults to google_aio');
   });
 
   it('calls the API with the tool arguments and returns the response as JSON text', async () => {
