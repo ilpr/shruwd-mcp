@@ -7,6 +7,12 @@
     "url": "https://github.com/ilpr/shruwd-mcp",
     "source": "github"
   },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://shruwd.io/mcp"
+    }
+  ],
   "packages": [
     {
       "registryType": "npm",

@@ -10,6 +10,18 @@ one workspace and acts with your role in it: reads need `viewer`, writes `editor
 creating or archiving a brand `owner`, minting an ingest token `admin`. To work across
 several workspaces, mint a key in each and add one server entry per workspace.
 
+## Hosted, no install
+
+The same tools run at `https://shruwd.io/mcp` (Streamable HTTP). In Claude.ai, ChatGPT
+or Grok, add that URL as a custom connector and sign in with your Shruwd account; no
+key needed. A client that takes a header can send a key instead:
+
+```powershell
+claude mcp add --transport http shruwd https://shruwd.io/mcp --header "Authorization: Bearer sh_live_…"
+```
+
+Setup for each app: [shruwd.io/docs/api/mcp-server](https://shruwd.io/docs/api/mcp-server).
+
 ## Claude Desktop
 
 `claude_desktop_config.json`:

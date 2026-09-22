@@ -128,9 +128,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'brand or running a measurement schedules work whose results arrive over the following hours. ' +
         'Every metric is either a point estimate with a 95% interval and n, or an explicit ' +
         '"insufficient_data" / "undefined" state. insufficient_data is not zero — never report it as a number. ' +
-        'The key is bound to one workspace and acts with its holder\'s role there: reads need viewer, writes ' +
-        'editor, creating or archiving a brand owner, minting an ingest token admin. Refusals are 403 ' +
-        'not_a_member and 403 insufficient_role.',
+        'The API key, or the sign-in that connected this app, is bound to one workspace and acts with its ' +
+        'holder\'s role there: reads need viewer, writes editor, creating or archiving a brand owner, minting ' +
+        'an ingest token admin. Refusals are 403 not_a_member and 403 insufficient_role.',
     },
   );
 
