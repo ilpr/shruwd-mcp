@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.4';
+export const SERVER_VERSION = '0.1.5';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -128,9 +128,11 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'brand or running a measurement schedules work whose results arrive over the following hours. ' +
         'Every metric is either a point estimate with a 95% interval and n, or an explicit ' +
         '"insufficient_data" / "undefined" state. insufficient_data is not zero — never report it as a number. ' +
-        'The API key, or the sign-in that connected this app, is bound to one workspace and acts with its ' +
-        'holder\'s role there: reads need viewer, writes editor, creating or archiving a brand owner, minting ' +
-        'an ingest token admin. Refusals are 403 not_a_member and 403 insufficient_role.',
+        'The API key, or the sign-in that connected this app, is bound to one workspace and reaches its ' +
+        'holder\'s brands there: every brand for the workspace owner, a member\'s own brands otherwise. ' +
+        'It acts with the holder\'s role on each brand: reads need viewer, writes editor, minting an ingest ' +
+        'token admin; creating or archiving a brand needs the owner. A brand the holder cannot reach is a ' +
+        '404. Refusals are 403 not_a_member and 403 insufficient_role.',
     },
   );
 
@@ -144,8 +146,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'The plan, the entitlements in force (brands, the workspace-wide prompt pool, members, engines, ' +
         'cadence, history window, rechecks per month, and maxVisibleFindings — how many findings the plan ' +
         'shows in full), usage against the period allowance including activePrompts against ' +
-        'promptsAllowance, the caller\'s role in this workspace, and the brands. Call this first: the role ' +
-        'decides which of these tools are allowed.',
+        'promptsAllowance, whether the caller is the workspace owner or a member, and the brands the ' +
+        'caller can reach with their role on each. Call this first: the role on a brand decides which of ' +
+        'these tools are allowed on it. Usage is the whole workspace\'s, since the pools are shared.',
       annotations: READ,
     },
     () => call(() => shruwd.workspace.get()),
@@ -155,7 +158,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     'shruwd_list_brands',
     {
       title: 'List brands',
-      description: 'Active brands with their prompt and competitor counts.',
+      description:
+        'The active brands the caller can reach, with their prompt and competitor counts and the ' +
+        'caller\'s role on each.',
       annotations: READ,
     },
     () => call(() => shruwd.brands.list()),
@@ -188,8 +193,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'one shruwd_add_prompts call: the first cycle starts within minutes of the first prompts and ' +
         'measures only the prompts and competitors that exist then. The name is the brand\'s own first ' +
         'alias, so a short (six characters or fewer) or common-word name is refused with ' +
-        'context_terms_required until contextTerms are given, as for a competitor. Requires the owner ' +
-        'role: a key held by an editor or admin is refused with 403 insufficient_role.',
+        'context_terms_required until contextTerms are given, as for a competitor. Requires the ' +
+        'workspace owner: a key held by a member is refused with 403 insufficient_role.',
       inputSchema: {
         name: z.string().min(1).max(120),
         domain: z.string().min(1).describe('Host or URL; reduced to the registrable domain (www.x.com/p → x.com).'),
@@ -239,8 +244,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     {
       title: 'Archive brand',
       description:
-        'Archives a brand. Nothing is deleted; scheduling stops and history stays. Requires the owner ' +
-        'role: a key held by an editor or admin is refused with 403 insufficient_role. Ask before using this.',
+        'Archives a brand. Nothing is deleted; scheduling stops and history stays. Requires the ' +
+        'workspace owner: a key held by a member is refused with 403 insufficient_role. Ask before using this.',
       inputSchema: { brandId },
       annotations: REMOVE,
     },
@@ -724,8 +729,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'token), or the reference forwarder Worker (any other Cloudflare plan or CDN-served site). ' +
         'The token is shown once and never again; previous tokens are revoked. Ask which platform the ' +
         'site runs on, then give the user that route\'s values verbatim. Logs power the crawler view ' +
-        'and the highest-confidence findings. Requires the admin role: a key held by an editor or viewer ' +
-        'is refused with 403 insufficient_role.',
+        'and the highest-confidence findings. Requires the admin role on the brand: a key held by an ' +
+        'editor or viewer there is refused with 403 insufficient_role.',
       inputSchema: { brandId, label: z.string().max(80).optional() },
       annotations: WRITE,
     },

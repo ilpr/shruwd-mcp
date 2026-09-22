@@ -6,9 +6,11 @@ set up a brand, add the prompts and competitors to track, read how the brand app
 AI-generated answers, and act on the diagnostic findings.
 
 You need an API key from the Shruwd dashboard (Account → API keys). The key is bound to
-one workspace and acts with your role in it: reads need `viewer`, writes `editor`,
-creating or archiving a brand `owner`, minting an ingest token `admin`. To work across
-several workspaces, mint a key in each and add one server entry per workspace.
+one workspace and reaches your brands in it: every brand if you own the workspace, the
+brands you are a member of otherwise. It acts with your role on each brand: reads need
+`viewer`, writes `editor`, minting an ingest token `admin`; creating or archiving a brand
+needs the owner. To work across several workspaces, mint a key in each and add one
+server entry per workspace.
 
 ## Hosted, no install
 
