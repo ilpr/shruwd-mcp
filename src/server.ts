@@ -366,10 +366,10 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       title: 'Add competitor',
       description:
         'Adds a competitor. Matching is exact, on word boundaries — no fuzzy matching, ever — because a ' +
-        'false positive silently corrupts every metric. That is also why a short name (six characters or ' +
-        'fewer) or a common English word ("Arc", "Linear", "Notion") is refused without contextTerms: ' +
+        'false positive silently corrupts every metric. That is also why a short name or alias (six characters ' +
+        'or fewer) or a common English word ("Arc", "Linear", "Notion") is refused without contextTerms: ' +
         'those names appear in sentences that are not about the company. Give one or two category words ' +
-        'as context terms ("waitlist", "crm") and the mention counts only when one appears nearby. ' +
+        'as context terms ("project management", "crm") and the mention counts only when one appears nearby. ' +
         'Include the competitor\'s domain so citations of it are attributed. On a new brand, add ' +
         'competitors before any prompt: the first measurement starts as soon as prompts exist, and a ' +
         'competitor added after it is not in it.',
@@ -447,7 +447,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       title: 'Accept a suggestion as a competitor',
       description:
         'Turns a suggestion into a tracked competitor, with exactly the rules of shruwd_add_competitor: ' +
-        'exact aliases only, and a short or common-word name is refused until contextTerms are given. ' +
+        'exact aliases only, and a short or common-word name or alias is refused until contextTerms are given. ' +
         'The name and the linked domain are prefilled from the suggestion; pass aliases, domains, ' +
         'exclusions or contextTerms to adjust. Confirm with the user before accepting.',
       inputSchema: {
