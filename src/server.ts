@@ -42,7 +42,10 @@ const engine = z
   .enum(['google_aio', 'chatgpt'])
   .describe('google_aio = Google AI Overviews; chatgpt = ChatGPT. Defaults to google_aio. Google AI Mode is not tracked.');
 
-const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
+// A factory, not a shared instance: a schema used twice in one tool is emitted
+// as a $ref to the first, which directory review reads as a parameter with no
+// type.
+const day = () => z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
 
 const windowDays = z
   .union([z.literal(7), z.literal(30), z.literal(90)])
@@ -136,9 +139,14 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     },
   );
 
+  // Every tool's title goes into annotations.title too: directory listings
+  // read it from there, clients from the top-level title.
+  const register: typeof server.registerTool = (name, config, cb) =>
+    server.registerTool(name, { ...config, annotations: { ...config.annotations, title: config.title } }, cb);
+
   // ── Workspace and brands ──────────────────────────────────────────────
 
-  server.registerTool(
+  register(
     'shruwd_get_workspace',
     {
       title: 'Get workspace',
@@ -154,7 +162,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     () => call(() => shruwd.workspace.get()),
   );
 
-  server.registerTool(
+  register(
     'shruwd_list_brands',
     {
       title: 'List brands',
@@ -166,7 +174,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     () => call(() => shruwd.brands.list()),
   );
 
-  server.registerTool(
+  register(
     'shruwd_get_brand',
     {
       title: 'Get brand',
@@ -180,7 +188,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ brandId }) => call(() => shruwd.brands.get(brandId)),
   );
 
-  server.registerTool(
+  register(
     'shruwd_create_brand',
     {
       title: 'Create brand',
@@ -214,7 +222,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_update_brand',
     {
       title: 'Update brand',
@@ -239,7 +247,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_archive_brand',
     {
       title: 'Archive brand',
@@ -254,7 +262,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
 
   // ── Prompts ───────────────────────────────────────────────────────────
 
-  server.registerTool(
+  register(
     'shruwd_list_prompts',
     {
       title: 'List prompts',
@@ -265,8 +273,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       inputSchema: {
         brandId,
         engine: engine.optional(),
-        from: day.optional(),
-        to: day.optional(),
+        from: day().optional(),
+        to: day().optional(),
         includeInactive: z.boolean().optional(),
       },
       annotations: READ,
@@ -282,7 +290,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_add_prompts',
     {
       title: 'Add prompts',
@@ -311,7 +319,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ brandId, prompts }) => call(() => shruwd.prompts.add(brandId, prompts)),
   );
 
-  server.registerTool(
+  register(
     'shruwd_update_prompt',
     {
       title: 'Update prompt',
@@ -339,7 +347,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_remove_prompt',
     {
       title: 'Remove prompt',
@@ -352,7 +360,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
 
   // ── Entities ──────────────────────────────────────────────────────────
 
-  server.registerTool(
+  register(
     'shruwd_list_entities',
     {
       title: 'List entities',
@@ -365,7 +373,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ brandId }) => call(() => shruwd.entities.list(brandId)),
   );
 
-  server.registerTool(
+  register(
     'shruwd_add_competitor',
     {
       title: 'Add competitor',
@@ -393,7 +401,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_set_entity',
     {
       title: 'Set entity configuration',
@@ -416,7 +424,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_remove_entity',
     {
       title: 'Remove competitor',
@@ -429,7 +437,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
 
   // ── Discovery ─────────────────────────────────────────────────────────
 
-  server.registerTool(
+  register(
     'shruwd_list_suggestions',
     {
       title: 'List competitor suggestions',
@@ -446,7 +454,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ brandId, state }) => call(() => shruwd.suggestions.list(brandId, state ?? 'open')),
   );
 
-  server.registerTool(
+  register(
     'shruwd_accept_suggestion',
     {
       title: 'Accept a suggestion as a competitor',
@@ -474,7 +482,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_dismiss_suggestion',
     {
       title: 'Dismiss a suggestion',
@@ -487,7 +495,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
 
   // ── Measurement ───────────────────────────────────────────────────────
 
-  server.registerTool(
+  register(
     'shruwd_run_measurement',
     {
       title: 'Run a measurement',
@@ -504,7 +512,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ brandId }) => call(() => shruwd.cycles.run(brandId)),
   );
 
-  server.registerTool(
+  register(
     'shruwd_list_cycles',
     {
       title: 'List cycles',
@@ -520,7 +528,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ brandId, limit }) => call(() => shruwd.cycles.list(brandId, limit)),
   );
 
-  server.registerTool(
+  register(
     'shruwd_get_visibility',
     {
       title: 'Get visibility',
@@ -534,7 +542,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'clamped to the plan\'s history. "modelIds" lists the provider models seen; a change there can ' +
         'move metrics on its own. engine defaults to google_aio: call once per engine the brand ' +
         'measures (its engines) and report each separately.',
-      inputSchema: { brandId, engine: engine.optional(), from: day.optional(), to: day.optional() },
+      inputSchema: { brandId, engine: engine.optional(), from: day().optional(), to: day().optional() },
       annotations: READ,
     },
     ({ brandId, engine, from, to }) =>
@@ -547,7 +555,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_get_visibility_series',
     {
       title: 'Get visibility over time',
@@ -562,8 +570,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         brandId,
         engine: engine.optional(),
         window: windowDays.optional(),
-        from: day.optional(),
-        to: day.optional(),
+        from: day().optional(),
+        to: day().optional(),
       },
       annotations: READ,
     },
@@ -578,7 +586,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_get_crawlers',
     {
       title: 'Get crawler activity',
@@ -589,7 +597,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'summed. "live_retrieval" bots fetch pages to answer a question now, so a page they cannot fetch ' +
         'cannot be cited in those answers; "training" crawlers collect pages for model training. ' +
         '"coverage" says whether log ingest has been continuous — if not, an absence of hits means nothing.',
-      inputSchema: { brandId, from: day.optional(), to: day.optional() },
+      inputSchema: { brandId, from: day().optional(), to: day().optional() },
       annotations: READ,
     },
     ({ brandId, from, to }) =>
@@ -603,7 +611,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
 
   // ── Findings ──────────────────────────────────────────────────────────
 
-  server.registerTool(
+  register(
     'shruwd_list_findings',
     {
       title: 'List findings',
@@ -639,7 +647,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       ),
   );
 
-  server.registerTool(
+  register(
     'shruwd_suggest_setup',
     {
       title: 'Suggest prompts and competitors',
@@ -660,7 +668,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       call(() => shruwd.setup.suggest(brandId, regenerate === undefined ? {} : { regenerate })),
   );
 
-  server.registerTool(
+  register(
     'shruwd_list_answers',
     {
       title: 'List latest answers',
@@ -677,7 +685,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ brandId, limit }) => call(() => shruwd.answers.list(brandId, limit)),
   );
 
-  server.registerTool(
+  register(
     'shruwd_get_finding',
     {
       title: 'Get finding',
@@ -691,7 +699,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     ({ findingId }) => call(() => shruwd.findings.get(findingId)),
   );
 
-  server.registerTool(
+  register(
     'shruwd_transition_finding',
     {
       title: 'Transition finding',
@@ -718,7 +726,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
 
   // ── Connections ───────────────────────────────────────────────────────
 
-  server.registerTool(
+  register(
     'shruwd_create_ingest_token',
     {
       title: 'Create log-drain token',

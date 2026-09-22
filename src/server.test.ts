@@ -120,6 +120,22 @@ describe('shruwd-mcp', () => {
     expect(byName.get('shruwd_get_visibility')).toContain('engine defaults to google_aio');
   });
 
+  // Directory review (Claude connectors) reads annotations.title, and flags a
+  // parameter whose schema is a $ref to another one as having no type.
+  it('gives every tool an annotations.title and every parameter a self-contained schema', async () => {
+    const { client, server } = await connect(fakeApi([]).fetch);
+    cleanup = async () => {
+      await client.close();
+      await server.close();
+    };
+
+    const { tools } = await client.listTools();
+    for (const tool of tools) {
+      expect(tool.annotations?.title, tool.name).toBe(tool.title);
+      expect(JSON.stringify(tool.inputSchema), tool.name).not.toContain('$ref');
+    }
+  });
+
   it('calls the API with the tool arguments and returns the response as JSON text', async () => {
     const api = fakeApi([
       { status: 201, body: { prompts: [{ promptGroupId: 'g1', text: 'best crm', intent: 'commercial' }] } },
