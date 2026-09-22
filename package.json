@@ -1,6 +1,6 @@
 {
   "name": "shruwd-mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "MCP server for Shruwd: lets an AI agent set up a brand, read its AI-search visibility, and act on diagnostic findings.",
   "keywords": ["mcp", "model context protocol", "shruwd", "ai search", "ai overviews", "chatgpt"],
   "homepage": "https://shruwd.io",
