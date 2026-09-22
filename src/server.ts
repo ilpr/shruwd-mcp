@@ -640,7 +640,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       title: 'Suggest prompts and competitors',
       description:
         "Reads the brand's homepage and drafts ten prompts and up to six competitors. Nothing is saved to the " +
-        'brand: show the draft to the user, then add each competitor they confirm with shruwd_add_competitor ' +
+        'brand: show the draft to the user, then add each competitor they confirm with shruwd_add_competitor, ' +
+        'passing its aliases and contextTerms from the draft, ' +
         'and after that the prompts they keep, in one shruwd_add_prompts call. Returns the stored draft ' +
         'when one exists unless regenerate is true. Three drafts per brand per day; a new draft can take ' +
         'up to a minute.',
