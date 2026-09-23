@@ -132,6 +132,10 @@ describe('shruwd-mcp', () => {
     const { tools } = await client.listTools();
     for (const tool of tools) {
       expect(tool.annotations?.title, tool.name).toBe(tool.title);
+      // ChatGPT's plugin review refuses a tool that leaves a hint to its default.
+      for (const hint of ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint'] as const) {
+        expect(typeof tool.annotations?.[hint], `${tool.name}.${hint}`).toBe('boolean');
+      }
       expect(JSON.stringify(tool.inputSchema), tool.name).not.toContain('$ref');
     }
   });

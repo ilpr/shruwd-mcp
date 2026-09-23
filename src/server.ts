@@ -114,9 +114,13 @@ async function call(fn: () => Promise<unknown>): Promise<CallToolResult> {
   }
 }
 
-const READ = { readOnlyHint: true, openWorldHint: true } as const;
-const WRITE = { readOnlyHint: false, destructiveHint: false, openWorldHint: true } as const;
-const REMOVE = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true } as const;
+// Every hint explicit: directory review (ChatGPT plugins) refuses a tool whose
+// destructiveHint is left to the default. openWorldHint is false because a
+// tool reads and writes the caller's own Shruwd workspace; the two that reach
+// outside it — reading a site, asking the AI engines — set it true.
+const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
+const WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const;
+const REMOVE = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false } as const;
 
 // ─── The server ─────────────────────────────────────────────────────────────
 
@@ -236,7 +240,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         name: z.string().min(1).max(120).optional(),
         timezone: z.string().optional().describe('IANA zone.'),
       },
-      annotations: WRITE,
+      annotations: { ...WRITE, idempotentHint: true },
     },
     ({ brandId, name, timezone }) =>
       call(() =>
@@ -411,7 +415,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'added, what is unchanged is untouched, and past measurements keep the aliases that were valid ' +
         'when they ran. Read shruwd_list_entities first.',
       inputSchema: { entityId: z.string().min(1), ...entityConfig },
-      annotations: { ...WRITE, idempotentHint: true },
+      annotations: { ...WRITE, destructiveHint: true, idempotentHint: true },
     },
     ({ entityId, aliases, domains, exclusions, contextTerms }) =>
       call(() =>
@@ -507,7 +511,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         '(see shruwd_get_workspace); weekly plans already run one per week, so use this for a first ' +
         'read or after a change worth measuring. On the free tier it is the single free measurement.',
       inputSchema: { brandId },
-      annotations: WRITE,
+      annotations: { ...WRITE, openWorldHint: true },
     },
     ({ brandId }) => call(() => shruwd.cycles.run(brandId)),
   );
@@ -662,7 +666,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         brandId,
         regenerate: z.boolean().optional().describe('Replace the stored draft with a new one.'),
       },
-      annotations: WRITE,
+      annotations: { ...WRITE, openWorldHint: true },
     },
     ({ brandId, regenerate }) =>
       call(() => shruwd.setup.suggest(brandId, regenerate === undefined ? {} : { regenerate })),
@@ -740,7 +744,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'and the highest-confidence findings. Requires the admin role on the brand: a key held by an ' +
         'editor or viewer there is refused with 403 insufficient_role.',
       inputSchema: { brandId, label: z.string().max(80).optional() },
-      annotations: WRITE,
+      annotations: { ...WRITE, destructiveHint: true },
     },
     ({ brandId, label }) => call(() => shruwd.connections.createIngestToken(brandId, label)),
   );
