@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.5';
+export const SERVER_VERSION = '0.1.6';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -58,6 +58,17 @@ const intent = z
       'options; commercial = choosing what to buy; navigational = looking for a specific site; ' +
       'problem = fixing something. Decides which diagnostic rules apply.',
   );
+
+// A factory for the same reason as `day`.
+const promptPage = () =>
+  z
+    .string()
+    .min(1)
+    .max(2048)
+    .describe(
+      "The page on the brand's own site that should answer this question, as a full URL on one of its " +
+        'own domains. Findings about the question name it. null clears it.',
+    );
 
 const aliasInput = z.object({
   alias: z.string().min(1).max(80).describe('An exact string, matched on word boundaries. Not a pattern.'),
@@ -314,6 +325,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
               text: z.string().min(1).max(500),
               intent,
               tags: z.array(z.string().max(40)).optional(),
+              page: promptPage().optional(),
             }),
           )
           .min(1),
@@ -329,24 +341,29 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       title: 'Update prompt',
       description:
         'Edits a prompt by its promptGroupId. Changing text or intent creates a new version under the ' +
-        'same group — history stays attached to the version that produced it. tags and active change in ' +
-        'place. Reactivating counts against the plan limit.',
+        'same group — history stays attached to the version that produced it. tags, active and page change ' +
+        "in place. Reactivating counts against the plan limit. page is the page on the brand's own site " +
+        'that should answer the question: when a finding on a prompt has recommendation.target null, or ' +
+        "names the wrong page, set it here (the finding's subjectRef is the promptGroupId). Findings name " +
+        'it from the next measurement, not at once.',
       inputSchema: {
         promptGroupId: z.string().min(1),
         text: z.string().min(1).max(500).optional(),
         intent: intent.optional(),
         tags: z.array(z.string().max(40)).optional(),
         active: z.boolean().optional(),
+        page: promptPage().nullable().optional(),
       },
       annotations: WRITE,
     },
-    ({ promptGroupId, text, intent, tags, active }) =>
+    ({ promptGroupId, text, intent, tags, active, page }) =>
       call(() =>
         shruwd.prompts.update(promptGroupId, {
           ...(text !== undefined ? { text } : {}),
           ...(intent !== undefined ? { intent } : {}),
           ...(tags !== undefined ? { tags } : {}),
           ...(active !== undefined ? { active } : {}),
+          ...(page !== undefined ? { page } : {}),
         }),
       ),
   );
@@ -679,14 +696,31 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       description:
         'The latest individual AI answers for the brand, newest first: the prompt, the engine, whether the brand ' +
         'was named and at what rank, the competitors named and the pages cited. Evidence, not a metric: never ' +
-        'compute a rate from these; use shruwd_get_visibility, which withholds numbers below ten answers.',
+        'compute a rate from these; use shruwd_get_visibility, which withholds numbers below ten answers. ' +
+        'To read the answers behind a finding on a prompt, pass its subjectRef as promptGroupId.',
       inputSchema: {
         brandId,
         limit: z.number().int().min(1).max(50).optional().describe('How many answers. Defaults to 10.'),
+        promptGroupId: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Only this prompt's answers: a promptGroupId from shruwd_list_prompts, or a finding's subjectRef."),
+        engine: z
+          .enum(['google_aio', 'chatgpt'])
+          .optional()
+          .describe("Only this engine's answers. google_aio = Google AI Overviews; chatgpt = ChatGPT."),
       },
       annotations: READ,
     },
-    ({ brandId, limit }) => call(() => shruwd.answers.list(brandId, limit)),
+    ({ brandId, limit, promptGroupId, engine }) =>
+      call(() =>
+        shruwd.answers.list(brandId, {
+          ...(limit !== undefined ? { limit } : {}),
+          ...(promptGroupId !== undefined ? { promptGroupId } : {}),
+          ...(engine !== undefined ? { engine } : {}),
+        }),
+      ),
   );
 
   register(
