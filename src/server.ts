@@ -748,8 +748,10 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         '"dismissed". Order matters: an open finding must be acknowledged before fix_applied, or the ' +
         'call is refused with 409 invalid_transition. fix_applied captures a baseline of the affected ' +
         'prompts and starts a fourteen-day clock; a recheck then measures again, and the finding becomes ' +
-        '"resolved" ONLY if the movement gates pass (non-overlapping intervals and at least five points of ' +
-        'change), else "not_moved". ACCESS findings are instead confirmed from the site\'s own logs, ' +
+        '"resolved" ONLY if the movement gates pass (a significant change whose 95% interval excludes zero, ' +
+        'and at least five points of change), else "not_moved", whose verdict says which outcome it was ' +
+        '(rising but not proven, no change, fell, model changed, too few answers). ACCESS findings are ' +
+        'instead confirmed from the site\'s own logs, ' +
         'robots.txt or page, with no wait and no recheck spent. Neither resolved nor not_moved can be ' +
         'set here. Do not mark fix_applied until the change is actually deployed; the baseline is taken ' +
         'at that moment. A finding withheld by the plan is refused with 403 not_entitled.',
