@@ -77,7 +77,13 @@ const aliasInput = z.object({
 });
 
 const entityConfig = {
-  aliases: z.array(aliasInput).optional().describe('Defaults to the name. Exact strings only.'),
+  aliases: z
+    .array(aliasInput)
+    .optional()
+    .describe(
+      'Exact strings only. When adding, the name is always matched: list only its other spellings. When ' +
+        'setting, the complete list wanted, the name included; omitted, it is the name alone.',
+    ),
   domains: z
     .array(z.string())
     .optional()
@@ -316,7 +322,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'every brand in the workspace, not a per-brand limit — nothing is added and the error carries ' +
         'limit, current and submitted. On a new brand the first measurement starts within minutes of ' +
         'the first prompts and covers only what exists then, so add its competitors before this and ' +
-        'every prompt in one call.',
+        'every prompt in one call. Prompts from shruwd_suggest_setup carry a page: pass it with each ' +
+        'one, or the findings about that question have no page of the brand\'s to name.',
       inputSchema: {
         brandId,
         prompts: z
@@ -525,8 +532,10 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'the plan sets (three times on weekly plans, once for the free snapshot). It starts at once and ' +
         'completes over the following day; this response contains only the cycle id. Watch it with shruwd_list_cycles, then read ' +
         'shruwd_get_visibility and shruwd_list_findings. A cycle spends the period\'s run allowance ' +
-        '(see shruwd_get_workspace); weekly plans already run one per week, so use this for a first ' +
-        'read or after a change worth measuring. On the free tier it is the single free measurement.',
+        '(see shruwd_get_workspace); weekly plans already run one per week, so use this after a change ' +
+        'worth measuring. Do not call it to start a new brand: shruwd_create_brand plants the first ' +
+        'measurement, and it starts by itself once the brand has prompts. On the free tier that first ' +
+        'measurement is the single free one.',
       inputSchema: { brandId },
       annotations: { ...WRITE, openWorldHint: true },
     },
