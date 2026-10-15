@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.6';
+export const SERVER_VERSION = '0.1.7';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -39,8 +39,10 @@ const findingId = z
   .describe('Finding id, or its number — the one shown in the dashboard and in its URL.');
 
 const engine = z
-  .enum(['google_aio', 'chatgpt'])
-  .describe('google_aio = Google AI Overviews; chatgpt = ChatGPT. Defaults to google_aio. Google AI Mode is not tracked.');
+  .enum(['google_aio', 'google_ai_mode', 'chatgpt'])
+  .describe(
+    'google_aio = Google AI Overviews; google_ai_mode = Google AI Mode; chatgpt = ChatGPT. Defaults to google_aio.',
+  );
 
 // A factory, not a shared instance: a schema used twice in one tool is emitted
 // as a $ref to the first, which directory review reads as a parameter with no
@@ -146,8 +148,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
       instructions:
-        'Shruwd measures how a brand appears in AI-generated answers (Google AI Overviews and ' +
-        'ChatGPT), diagnoses why it is or is not cited, recommends a specific fix, and re-checks whether ' +
+        'Shruwd measures how a brand appears in AI-generated answers (Google AI Overviews, Google AI ' +
+        'Mode and ChatGPT), diagnoses why it is or is not cited, recommends a specific fix, and re-checks whether ' +
         'the fix moved anything. Start with shruwd_get_workspace. Measurement is asynchronous: creating a ' +
         'brand or running a measurement schedules work whose results arrive over the following hours. ' +
         'Every metric is either a point estimate with a 95% interval and n, or an explicit ' +
@@ -718,9 +720,12 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
           .optional()
           .describe("Only this prompt's answers: a promptGroupId from shruwd_list_prompts, or a finding's subjectRef."),
         engine: z
-          .enum(['google_aio', 'chatgpt'])
+          .enum(['google_aio', 'google_ai_mode', 'chatgpt'])
           .optional()
-          .describe("Only this engine's answers. google_aio = Google AI Overviews; chatgpt = ChatGPT."),
+          .describe(
+            "Only this engine's answers. google_aio = Google AI Overviews; google_ai_mode = Google AI Mode; " +
+              'chatgpt = ChatGPT.',
+          ),
       },
       annotations: READ,
     },
