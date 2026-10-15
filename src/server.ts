@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.7';
+export const SERVER_VERSION = '0.1.8';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -637,6 +637,48 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         shruwd.crawlers.get(brandId, {
           ...(from !== undefined ? { from } : {}),
           ...(to !== undefined ? { to } : {}),
+        }),
+      ),
+  );
+
+  register(
+    'shruwd_list_crawler_paths',
+    {
+      title: 'List crawler activity per path',
+      description:
+        'Which paths each AI crawler fetched and what it got, one row per bot and path, verified hits only. ' +
+        'Use status "error" to find where the errors in shruwd_get_crawlers came from. Read contentPage before ' +
+        'calling an error a problem: it is false for files and framework data (_payload.json, scripts, images, ' +
+        'feeds) and for sign-in and account pages, and a framework data file can 404 to everyone by design. ' +
+        'worstStatus tells a missing page (404) from a refusal (403). totalPaths above the rows returned means ' +
+        'the list was cut. Per-path detail is kept 90 days.',
+      inputSchema: {
+        brandId,
+        from: day().optional(),
+        to: day().optional(),
+        bot: z
+          .string()
+          .min(1)
+          .optional()
+          .describe('Only this bot: a botId from shruwd_get_crawlers, such as oai_searchbot.'),
+        status: z
+          .enum(['2xx', '3xx', '4xx', '5xx', 'error'])
+          .optional()
+          .describe('Only paths that got this answer, most often first. error = 4xx or 5xx.'),
+        contentOnly: z.boolean().optional().describe('Only pages a person reads (contentPage true).'),
+        limit: z.number().int().min(1).max(200).optional().describe('How many rows. Defaults to 50.'),
+      },
+      annotations: READ,
+    },
+    ({ brandId, from, to, bot, status, contentOnly, limit }) =>
+      call(() =>
+        shruwd.crawlers.paths(brandId, {
+          ...(from !== undefined ? { from } : {}),
+          ...(to !== undefined ? { to } : {}),
+          ...(bot !== undefined ? { bot } : {}),
+          ...(status !== undefined ? { status } : {}),
+          ...(contentOnly === true ? { contentOnly: '1' as const } : {}),
+          ...(limit !== undefined ? { limit } : {}),
         }),
       ),
   );

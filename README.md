@@ -72,6 +72,7 @@ claude mcp add shruwd -e SHRUWD_API_KEY=sh_live_… -- npx -y shruwd-mcp
 | `shruwd_list_entities` · `shruwd_add_competitor` · `shruwd_set_entity` · `shruwd_remove_entity` | The brand and its competitors, with the exact aliases that count as a mention. |
 | `shruwd_run_measurement` · `shruwd_list_cycles` | Measure now; watch the cycle. Results arrive over the following hours. |
 | `shruwd_get_visibility` · `shruwd_get_visibility_series` · `shruwd_get_crawlers` | Mention rate and share of voice with intervals, now and at every cycle close; verified AI-crawler activity. |
+| `shruwd_list_crawler_paths` | Which paths each crawler fetched and what it got: where a bot's errors came from. |
 | `shruwd_list_answers` | The latest individual answers: whether the brand was named and at what rank, the competitors named, the pages cited. Narrows to one prompt (a finding's `subjectRef`) or one engine. Evidence, not a metric. |
 | `shruwd_list_suggestions` · `shruwd_accept_suggestion` · `shruwd_dismiss_suggestion` | Competitors the answers named that the brand does not track yet. |
 | `shruwd_suggest_setup` | Drafts 10 to 25 prompts, each with the page that should answer it, and up to six competitors from the homepage and sitemap. Nothing is saved until they are added with the usual tools. |

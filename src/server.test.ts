@@ -88,6 +88,7 @@ describe('shruwd-mcp', () => {
         'shruwd_get_workspace',
         'shruwd_list_brands',
         'shruwd_list_answers',
+        'shruwd_list_crawler_paths',
         'shruwd_list_cycles',
         'shruwd_list_entities',
         'shruwd_list_findings',
@@ -109,6 +110,7 @@ describe('shruwd-mcp', () => {
     expect(byName.get('shruwd_get_visibility')).toContain('insufficient_data is NOT zero');
     expect(byName.get('shruwd_add_competitor')).toContain('contextTerms');
     expect(byName.get('shruwd_get_crawlers')).toContain('never summed');
+    expect(byName.get('shruwd_list_crawler_paths')).toContain('_payload.json');
     expect(byName.get('shruwd_transition_finding')).toContain('fourteen-day');
     expect(byName.get('shruwd_transition_finding')).toContain('must be acknowledged before fix_applied');
     expect(byName.get('shruwd_run_measurement')).toContain('completes over the following day');
@@ -214,6 +216,24 @@ describe('shruwd-mcp', () => {
 
     expect(api.calls[0]?.url).toBe(
       'https://example.test/api/v1/brands/b1/findings?states=resolved%2Cnot_moved&suppressed=1',
+    );
+  });
+
+  it('maps list_crawler_paths arguments onto the API query', async () => {
+    const api = fakeApi([{ status: 200, body: { totalPaths: 0, paths: [] } }]);
+    const { client, server } = await connect(api.fetch);
+    cleanup = async () => {
+      await client.close();
+      await server.close();
+    };
+
+    await client.callTool({
+      name: 'shruwd_list_crawler_paths',
+      arguments: { brandId: 'b1', bot: 'oai_searchbot', status: 'error', contentOnly: true, limit: 20 },
+    });
+
+    expect(api.calls[0]?.url).toBe(
+      'https://example.test/api/v1/brands/b1/crawlers/paths?bot=oai_searchbot&status=error&contentOnly=1&limit=20',
     );
   });
 
