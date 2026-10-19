@@ -120,6 +120,8 @@ describe('shruwd-mcp', () => {
     expect(byName.get('shruwd_add_prompts')).toContain('add its competitors before this');
     expect(byName.get('shruwd_add_competitor')).toContain('before any prompt');
     expect(byName.get('shruwd_get_visibility')).toContain('engine defaults to google_aio');
+    // A brand-level rate can hide a loss on buying questions (metrics.md §3.1).
+    expect(byName.get('shruwd_get_visibility')).toContain('"intents" pools the per-prompt coverage by question type');
   });
 
   // Directory review (Claude connectors) reads annotations.title, and flags a

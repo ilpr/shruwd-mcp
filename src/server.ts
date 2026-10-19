@@ -572,8 +572,10 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'not report it as a number, and do not compare two metrics whose intervals overlap as if one were ' +
         'higher. "asOf" is the day the numbers describe. "historyFrom" is set when the window was ' +
         'clamped to the plan\'s history. "modelIds" lists the provider models seen; a change there can ' +
-        'move metrics on its own. engine defaults to google_aio: call once per engine the brand ' +
-        'measures (its engines) and report each separately.',
+        'move metrics on its own. "intents" pools the per-prompt coverage by question type, each with its ' +
+        'own n. Report the brand\'s rate on commercial (buying) questions separately from informational ' +
+        'ones, and treat an insufficient_data row as no number. engine defaults to google_aio: call once ' +
+        'per engine the brand measures (its engines) and report each separately.',
       inputSchema: { brandId, engine: engine.optional(), from: day().optional(), to: day().optional() },
       annotations: READ,
     },
