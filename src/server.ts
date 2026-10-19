@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.8';
+export const SERVER_VERSION = '0.1.9';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -574,8 +574,10 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'clamped to the plan\'s history. "modelIds" lists the provider models seen; a change there can ' +
         'move metrics on its own. "intents" pools the per-prompt coverage by question type, each with its ' +
         'own n. Report the brand\'s rate on commercial (buying) questions separately from informational ' +
-        'ones, and treat an insufficient_data row as no number. engine defaults to google_aio: call once ' +
-        'per engine the brand measures (its engines) and report each separately.',
+        'ones, and treat an insufficient_data row as no number. "firstNamed" is how often the entity is the ' +
+        'first of the tracked companies an answer names (n = share of voice\'s): a proxy for being the ' +
+        'first pick, not a recommendation. engine defaults to google_aio: call once per engine the brand ' +
+        'measures (its engines) and report each separately.',
       inputSchema: { brandId, engine: engine.optional(), from: day().optional(), to: day().optional() },
       annotations: READ,
     },
