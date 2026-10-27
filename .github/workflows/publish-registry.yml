@@ -27,13 +27,26 @@ jobs:
       id-token: write
       contents: read
 
+    # This job can mint an OIDC token that publishes under io.github.ilpr, so
+    # everything it runs is pinned: the checkout action to a commit, and the
+    # publisher to a release whose archive must match the checksum that release
+    # published. It used to run whatever `releases/latest` served that minute
+    # (security audit 2026-10-26, C5). To move to a newer publisher: take the
+    # sha256 of mcp-publisher_linux_amd64.tar.gz from that release's
+    # registry_<version>_checksums.txt, and change both lines below together.
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Install mcp-publisher
+        env:
+          PUBLISHER_VERSION: v1.8.1
+          PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          curl --fail --silent --show-error --location --output mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum --check --strict
+          tar xzf mcp-publisher.tar.gz mcp-publisher
 
       - name: Authenticate
         run: ./mcp-publisher login github-oidc
