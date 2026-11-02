@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.10';
+export const SERVER_VERSION = '0.1.11';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -696,6 +696,51 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
           ...(bot !== undefined ? { bot } : {}),
           ...(status !== undefined ? { status } : {}),
           ...(contentOnly === true ? { contentOnly: '1' as const } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+        }),
+      ),
+  );
+
+  register(
+    'shruwd_list_sources',
+    {
+      title: 'List the sources the answers cite',
+      description:
+        'Which sites and pages the AI answers cite, and whose they are: one row per domain, most-cited first, ' +
+        'with its most-cited pages. Use it to see what the engines read for the brand\'s questions, or for one ' +
+        "question (pass a promptGroupId, or a finding's subjectRef). kind says whose a domain is: yours, a " +
+        'competitor\'s, or a third party (review_directory, forum, wikipedia, video, editorial). rate is the share ' +
+        'of answers citing it with its 95% interval; state insufficient_data is not zero, never report it as a ' +
+        'number. answers.citingAny is how many answers cite anything at all: where few do (ChatGPT often cites ' +
+        'nothing), a share means less. yourAnswers counts answers citing your own pages there, or videos on your ' +
+        'named YouTube channel. findings lists the live findings about a source.',
+      inputSchema: {
+        brandId,
+        from: day().optional(),
+        to: day().optional(),
+        engine: z
+          .enum(['google_aio', 'google_ai_mode', 'chatgpt'])
+          .optional()
+          .describe(
+            "Only this engine's answers. google_aio = Google AI Overviews; google_ai_mode = Google AI Mode; " +
+              'chatgpt = ChatGPT.',
+          ),
+        promptGroupId: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Only the answers to this prompt: a promptGroupId from shruwd_list_prompts, or a finding's subjectRef."),
+        limit: z.number().int().min(1).max(100).optional().describe('How many sources. Defaults to 25.'),
+      },
+      annotations: READ,
+    },
+    ({ brandId, from, to, engine, promptGroupId, limit }) =>
+      call(() =>
+        shruwd.sources.list(brandId, {
+          ...(from !== undefined ? { from } : {}),
+          ...(to !== undefined ? { to } : {}),
+          ...(engine !== undefined ? { engine } : {}),
+          ...(promptGroupId !== undefined ? { promptGroupId } : {}),
           ...(limit !== undefined ? { limit } : {}),
         }),
       ),

@@ -93,6 +93,7 @@ describe('shruwd-mcp', () => {
         'shruwd_list_entities',
         'shruwd_list_findings',
         'shruwd_list_prompts',
+        'shruwd_list_sources',
         'shruwd_list_suggestions',
         'shruwd_remove_entity',
         'shruwd_remove_prompt',
@@ -111,6 +112,9 @@ describe('shruwd-mcp', () => {
     expect(byName.get('shruwd_add_competitor')).toContain('contextTerms');
     expect(byName.get('shruwd_get_crawlers')).toContain('never summed');
     expect(byName.get('shruwd_list_crawler_paths')).toContain('_payload.json');
+    // A withheld share is not zero, and a share means less where few answers cite anything.
+    expect(byName.get('shruwd_list_sources')).toContain('insufficient_data is not zero');
+    expect(byName.get('shruwd_list_sources')).toContain('citingAny');
     expect(byName.get('shruwd_transition_finding')).toContain('fourteen-day');
     expect(byName.get('shruwd_transition_finding')).toContain('must be acknowledged before fix_applied');
     expect(byName.get('shruwd_run_measurement')).toContain('completes over the following day');
@@ -238,6 +242,24 @@ describe('shruwd-mcp', () => {
 
     expect(api.calls[0]?.url).toBe(
       'https://example.test/api/v1/brands/b1/crawlers/paths?bot=oai_searchbot&status=error&contentOnly=1&limit=20',
+    );
+  });
+
+  it('maps list_sources arguments onto the API query', async () => {
+    const api = fakeApi([{ status: 200, body: { totalSources: 0, sources: [] } }]);
+    const { client, server } = await connect(api.fetch);
+    cleanup = async () => {
+      await client.close();
+      await server.close();
+    };
+
+    await client.callTool({
+      name: 'shruwd_list_sources',
+      arguments: { brandId: 'b1', engine: 'google_aio', promptGroupId: 'pg_1', limit: 10 },
+    });
+
+    expect(api.calls[0]?.url).toBe(
+      'https://example.test/api/v1/brands/b1/sources?engine=google_aio&promptGroupId=pg_1&limit=10',
     );
   });
 
