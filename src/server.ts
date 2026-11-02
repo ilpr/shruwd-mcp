@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.9';
+export const SERVER_VERSION = '0.1.10';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -90,6 +90,15 @@ const entityConfig = {
     .array(z.string())
     .optional()
     .describe('Hosts or URLs; reduced to registrable domains. A citation of one counts for this entity.'),
+  channels: z
+    .array(z.string().max(300))
+    .max(5)
+    .optional()
+    .describe(
+      'YouTube channels the company publishes on, as the channel URL YouTube shows ' +
+        '(https://www.youtube.com/@name) or the @handle. A cited video on one counts for this entity. ' +
+        'Optional; when setting, omit it to leave the channels as they are, [] to remove them.',
+    ),
   exclusions: z
     .array(z.string().max(80))
     .optional()
@@ -395,8 +404,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     {
       title: 'List entities',
       description:
-        'The brand itself (isSelf) and every competitor, each with the exact aliases, domains, ' +
-        'exclusions and context terms that decide what counts as a mention or a citation.',
+        'The brand itself (isSelf) and every competitor, each with the exact aliases, domains, YouTube ' +
+        'channels, exclusions and context terms that decide what counts as a mention or a citation.',
       inputSchema: { brandId },
       annotations: READ,
     },
@@ -413,18 +422,20 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'or fewer) or a common English word ("Arc", "Linear", "Notion") is refused without contextTerms: ' +
         'those names appear in sentences that are not about the company. Give one or two category words ' +
         'as context terms ("project management", "crm") and the mention counts only when one appears nearby. ' +
-        'Include the competitor\'s domain so citations of it are attributed. On a new brand, add ' +
+        'Include the competitor\'s domain so citations of it are attributed, and its YouTube channel if it ' +
+        'has one so its cited videos are too. On a new brand, add ' +
         'competitors before any prompt: the first measurement starts as soon as prompts exist, and a ' +
         'competitor added after it is not in it.',
       inputSchema: { brandId, name: z.string().min(1).max(120), ...entityConfig },
       annotations: WRITE,
     },
-    ({ brandId, name, aliases, domains, exclusions, contextTerms }) =>
+    ({ brandId, name, aliases, domains, channels, exclusions, contextTerms }) =>
       call(() =>
         shruwd.entities.add(brandId, {
           name,
           ...(aliases !== undefined ? { aliases } : {}),
           ...(domains !== undefined ? { domains } : {}),
+          ...(channels !== undefined ? { channels } : {}),
           ...(exclusions !== undefined ? { exclusions } : {}),
           ...(contextTerms !== undefined ? { contextTerms } : {}),
         }),
@@ -439,15 +450,17 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'Sets the DESIRED aliases, domains, exclusions and context terms of an entity (the brand\'s own ' +
         'self entity included). Send the full lists: what is missing is closed as of now, what is new is ' +
         'added, what is unchanged is untouched, and past measurements keep the aliases that were valid ' +
-        'when they ran. Read shruwd_list_entities first.',
+        'when they ran. YouTube channels are the exception: omitted, they stay as they are. Read ' +
+        'shruwd_list_entities first.',
       inputSchema: { entityId: z.string().min(1), ...entityConfig },
       annotations: { ...WRITE, destructiveHint: true, idempotentHint: true },
     },
-    ({ entityId, aliases, domains, exclusions, contextTerms }) =>
+    ({ entityId, aliases, domains, channels, exclusions, contextTerms }) =>
       call(() =>
         shruwd.entities.set(entityId, {
           ...(aliases !== undefined ? { aliases } : {}),
           ...(domains !== undefined ? { domains } : {}),
+          ...(channels !== undefined ? { channels } : {}),
           ...(exclusions !== undefined ? { exclusions } : {}),
           ...(contextTerms !== undefined ? { contextTerms } : {}),
         }),
@@ -500,12 +513,13 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       },
       annotations: WRITE,
     },
-    ({ suggestionId, name, aliases, domains, exclusions, contextTerms }) =>
+    ({ suggestionId, name, aliases, domains, channels, exclusions, contextTerms }) =>
       call(() =>
         shruwd.suggestions.accept(suggestionId, {
           ...(name !== undefined ? { name } : {}),
           ...(aliases !== undefined ? { aliases } : {}),
           ...(domains !== undefined ? { domains } : {}),
+          ...(channels !== undefined ? { channels } : {}),
           ...(exclusions !== undefined ? { exclusions } : {}),
           ...(contextTerms !== undefined ? { contextTerms } : {}),
         }),
