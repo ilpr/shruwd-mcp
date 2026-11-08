@@ -150,6 +150,23 @@ describe('shruwd-mcp', () => {
     }
   });
 
+  // The two ChatGPT's plugin scan held on 2026-10-15 (providers/mcp-clients.md §9).
+  it('marks overwriting the setup draft destructive and a finding transition open-world', async () => {
+    const { client, server } = await connect(fakeApi([]).fetch);
+    cleanup = async () => {
+      await client.close();
+      await server.close();
+    };
+
+    const { tools } = await client.listTools();
+    const hints = (name: string) => tools.find((t) => t.name === name)?.annotations;
+    // regenerate replaces the stored draft.
+    expect(hints('shruwd_suggest_setup')).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
+    // fix_applied starts a recheck that asks the AI engines, like shruwd_run_measurement.
+    expect(hints('shruwd_transition_finding')).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: true });
+    expect(hints('shruwd_run_measurement')).toMatchObject({ openWorldHint: true });
+  });
+
   it('calls the API with the tool arguments and returns the response as JSON text', async () => {
     const api = fakeApi([
       { status: 201, body: { prompts: [{ promptGroupId: 'g1', text: 'best crm', intent: 'commercial' }] } },

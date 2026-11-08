@@ -144,8 +144,12 @@ async function call(fn: () => Promise<unknown>): Promise<CallToolResult> {
 
 // Every hint explicit: directory review (ChatGPT plugins) refuses a tool whose
 // destructiveHint is left to the default. openWorldHint is false because a
-// tool reads and writes the caller's own Shruwd workspace; the two that reach
-// outside it — reading a site, asking the AI engines — set it true.
+// tool reads and writes the caller's own Shruwd workspace; the ones that reach
+// outside it — reading a site, asking the AI engines, a finding's recheck —
+// set it true. destructiveHint is true for any write that deletes or
+// overwrites, even when it can be redone: OpenAI's plugin guidelines, re-read
+// 2026-11-03 ("Being able to undo an action does not, by itself, justify
+// setting destructiveHint to false"; providers/mcp-clients.md §9).
 const READ = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 const WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } as const;
 const REMOVE = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false } as const;
@@ -801,7 +805,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         brandId,
         regenerate: z.boolean().optional().describe('Replace the stored draft with a new one.'),
       },
-      annotations: { ...WRITE, openWorldHint: true },
+      // regenerate overwrites the stored draft.
+      annotations: { ...WRITE, destructiveHint: true, openWorldHint: true },
     },
     ({ brandId, regenerate }) =>
       call(() => shruwd.setup.suggest(brandId, regenerate === undefined ? {} : { regenerate })),
@@ -879,7 +884,8 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         to: z.enum(['acknowledged', 'fix_applied', 'dismissed']),
         note: z.string().max(2000).optional().describe('What was done, for the record.'),
       },
-      annotations: WRITE,
+      // fix_applied starts a recheck that asks the AI engines again, or reads the site.
+      annotations: { ...WRITE, openWorldHint: true },
     },
     ({ findingId, to, note }) =>
       call(() => shruwd.findings.transition(findingId, { to, ...(note !== undefined ? { note } : {}) })),
