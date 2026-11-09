@@ -775,7 +775,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         includeSuppressed: z
           .boolean()
           .optional()
-          .describe('Also return findings suppressed because a more fundamental finding explains them.'),
+          .describe(
+            'Also return held findings: suppressed because a more fundamental finding explains them, or waiting while another fix on the same question is measured (suppressedReason).',
+          ),
       },
       annotations: READ,
     },
