@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.12';
+export const SERVER_VERSION = '0.1.13';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -38,11 +38,14 @@ const findingId = z
   .min(1)
   .describe('Finding id, or its number — the one shown in the dashboard and in its URL.');
 
+// The three reads that can take every engine at once (api.md §2.5, metrics.md
+// §3.7): visibility, its series and prompts.
 const engine = z
-  .enum(['google_aio', 'google_ai_mode', 'chatgpt', 'gemini'])
+  .enum(['all', 'google_aio', 'google_ai_mode', 'chatgpt', 'gemini', 'perplexity'])
   .describe(
-    'google_aio = Google AI Overviews; google_ai_mode = Google AI Mode; chatgpt = ChatGPT; gemini = Gemini. ' +
-      'Defaults to google_aio.',
+    'all = every engine the brand measures, in one call; google_aio = Google AI Overviews; ' +
+      'google_ai_mode = Google AI Mode; chatgpt = ChatGPT; gemini = Gemini; perplexity = Perplexity, asked ' +
+      'through its Sonar API. Defaults to google_aio.',
   );
 
 // A factory, not a shared instance: a schema used twice in one tool is emitted
@@ -163,7 +166,7 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
     {
       instructions:
         'Shruwd measures how a brand appears in AI-generated answers (Google AI Overviews, Google AI ' +
-        'Mode, ChatGPT and Gemini), diagnoses why it is or is not cited, recommends a specific fix, and re-checks whether ' +
+        'Mode, ChatGPT, Gemini and Perplexity), diagnoses why it is or is not cited, recommends a specific fix, and re-checks whether ' +
         'the fix moved anything. Start with shruwd_get_workspace. Measurement is asynchronous: creating a ' +
         'brand or running a measurement schedules work whose results arrive over the following hours. ' +
         'Every metric is either a point estimate with a 95% interval and n, or an explicit ' +
@@ -306,7 +309,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
       description:
         'The brand\'s prompts. With an engine, each prompt carries its coverage over the window: how ' +
         'often the brand was mentioned in answers to it. Per-prompt n is small (three repetitions per ' +
-        'cycle), so coverage is often insufficient_data; that is correct, not missing data.',
+        'cycle), so coverage is often insufficient_data; that is correct, not missing data. engine "all" ' +
+        'gives each prompt its coverage on every engine under "byEngine": where a question is lost on one ' +
+        'engine and not the others.',
       inputSchema: {
         brandId,
         engine: engine.optional(),
@@ -595,8 +600,13 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'own n. Report the brand\'s rate on commercial (buying) questions separately from informational ' +
         'ones, and treat an insufficient_data row as no number. "firstNamed" is how often the entity is the ' +
         'first of the tracked companies an answer names (n = share of voice\'s): a proxy for being the ' +
-        'first pick, not a recommendation. engine defaults to google_aio: call once per engine the brand ' +
-        'measures (its engines) and report each separately.',
+        'first pick, not a recommendation. engine defaults to google_aio. engine: "all" returns every ' +
+        'engine\'s mention rate for each entity in one call ("byEngine"), plus the mention rate across ' +
+        'engines: an equal-weight average over the engines that answered through the whole window ' +
+        '("engines"; "joining" names any that start later). Use it for an overview. Share of voice, named ' +
+        'first, prominence and the per-prompt rows are per engine: for those, call once per engine and ' +
+        'report each separately. Findings, rechecks and movement are per engine; never report a change in ' +
+        'the cross-engine rate as a result of a fix.',
       inputSchema: { brandId, engine: engine.optional(), from: day().optional(), to: day().optional() },
       annotations: READ,
     },
@@ -620,7 +630,11 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         '{state: "ok", point, lo, hi, n} metric or an explicit non-number. Use it to answer "is this ' +
         'changing" — but two points whose intervals overlap have NOT moved, and a change across a ' +
         '"modelChanges" entry may be the provider\'s model rather than the brand (the comparison is ' +
-        'confounded). "series" is index-aligned with "points"; null means no rollup row for that close.',
+        'confounded). "series" is index-aligned with "points"; null means no rollup row for that close. ' +
+        'engine: "all" returns the mention rate across engines at every close, with "engineSets" (the ' +
+        'engines in it at each point) and "engineSetChanges", where the set changed: never compare two ' +
+        'points across one. Findings, rechecks and movement are per engine; never report a change in the ' +
+        'cross-engine rate as a result of a fix.',
       inputSchema: {
         brandId,
         engine: engine.optional(),
@@ -724,11 +738,11 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         from: day().optional(),
         to: day().optional(),
         engine: z
-          .enum(['google_aio', 'google_ai_mode', 'chatgpt', 'gemini'])
+          .enum(['google_aio', 'google_ai_mode', 'chatgpt', 'gemini', 'perplexity'])
           .optional()
           .describe(
             "Only this engine's answers. google_aio = Google AI Overviews; google_ai_mode = Google AI Mode; " +
-              'chatgpt = ChatGPT; gemini = Gemini.',
+              'chatgpt = ChatGPT; gemini = Gemini; perplexity = Perplexity (its Sonar API).',
           ),
         promptGroupId: z
           .string()
@@ -833,11 +847,11 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
           .optional()
           .describe("Only this prompt's answers: a promptGroupId from shruwd_list_prompts, or a finding's subjectRef."),
         engine: z
-          .enum(['google_aio', 'google_ai_mode', 'chatgpt', 'gemini'])
+          .enum(['google_aio', 'google_ai_mode', 'chatgpt', 'gemini', 'perplexity'])
           .optional()
           .describe(
             "Only this engine's answers. google_aio = Google AI Overviews; google_ai_mode = Google AI Mode; " +
-              'chatgpt = ChatGPT; gemini = Gemini.',
+              'chatgpt = ChatGPT; gemini = Gemini; perplexity = Perplexity (its Sonar API).',
           ),
       },
       annotations: READ,
