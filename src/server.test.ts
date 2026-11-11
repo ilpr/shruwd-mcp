@@ -88,6 +88,7 @@ describe('shruwd-mcp', () => {
         'shruwd_get_workspace',
         'shruwd_list_brands',
         'shruwd_list_answers',
+        'shruwd_list_crawler_pages',
         'shruwd_list_crawler_paths',
         'shruwd_list_cycles',
         'shruwd_list_entities',
@@ -112,6 +113,9 @@ describe('shruwd-mcp', () => {
     expect(byName.get('shruwd_add_competitor')).toContain('contextTerms');
     expect(byName.get('shruwd_get_crawlers')).toContain('never summed');
     expect(byName.get('shruwd_list_crawler_paths')).toContain('_payload.json');
+    // A fetched page is not a cited one, and training sweeps say little.
+    expect(byName.get('shruwd_list_crawler_pages')).toContain('A page fetched is not a page cited');
+    expect(byName.get('shruwd_list_crawler_pages')).toContain('sweep every page evenly');
     // A withheld share is not zero, and a share means less where few answers cite anything.
     expect(byName.get('shruwd_list_sources')).toContain('insufficient_data is not zero');
     expect(byName.get('shruwd_list_sources')).toContain('citingAny');
@@ -260,6 +264,24 @@ describe('shruwd-mcp', () => {
 
     expect(api.calls[0]?.url).toBe(
       'https://example.test/api/v1/brands/b1/crawlers/paths?bot=oai_searchbot&status=error&contentOnly=1&limit=20',
+    );
+  });
+
+  it('maps list_crawler_pages arguments onto the API query', async () => {
+    const api = fakeApi([{ status: 200, body: { totalPages: 0, pages: [] } }]);
+    const { client, server } = await connect(api.fetch);
+    cleanup = async () => {
+      await client.close();
+      await server.close();
+    };
+
+    await client.callTool({
+      name: 'shruwd_list_crawler_pages',
+      arguments: { brandId: 'b1', purpose: 'live_retrieval', contentOnly: true, limit: 20 },
+    });
+
+    expect(api.calls[0]?.url).toBe(
+      'https://example.test/api/v1/brands/b1/crawlers/pages?purpose=live_retrieval&contentOnly=1&limit=20',
     );
   });
 

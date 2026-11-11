@@ -679,6 +679,43 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
   );
 
   register(
+    'shruwd_list_crawler_pages',
+    {
+      title: 'List the pages AI crawlers read most',
+      description:
+        'Which pages of the brand\'s site AI crawlers fetched most, every bot on a page added up, verified hits only. ' +
+        'liveRetrievalHits are fetches for answers being written now (a ChatGPT-User fetch means someone\'s question ' +
+        'pulled that page); trainingHits are crawls for model training, which tend to sweep every page evenly, so ' +
+        'they say little about which pages matter. Ordered by live retrieval, then training; purpose "training" ' +
+        'orders by training instead. bots says which bots fetched each page. Pass contentOnly to drop files, ' +
+        'framework data and sign-in pages. A page fetched is not a page cited: shruwd_list_sources says what the ' +
+        'answers cite. For one bot, or where errors came from, use shruwd_list_crawler_paths. Kept 90 days.',
+      inputSchema: {
+        brandId,
+        from: day().optional(),
+        to: day().optional(),
+        purpose: z
+          .enum(['live_retrieval', 'training'])
+          .optional()
+          .describe('Only pages this kind of crawler fetched, ordered by its hits.'),
+        contentOnly: z.boolean().optional().describe('Only pages a person reads (contentPage true).'),
+        limit: z.number().int().min(1).max(200).optional().describe('How many pages. Defaults to 50.'),
+      },
+      annotations: READ,
+    },
+    ({ brandId, from, to, purpose, contentOnly, limit }) =>
+      call(() =>
+        shruwd.crawlers.pages(brandId, {
+          ...(from !== undefined ? { from } : {}),
+          ...(to !== undefined ? { to } : {}),
+          ...(purpose !== undefined ? { purpose } : {}),
+          ...(contentOnly === true ? { contentOnly: '1' as const } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+        }),
+      ),
+  );
+
+  register(
     'shruwd_list_crawler_paths',
     {
       title: 'List crawler activity per path',

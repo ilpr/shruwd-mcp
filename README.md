@@ -72,6 +72,7 @@ claude mcp add shruwd -e SHRUWD_API_KEY=sh_live_… -- npx -y shruwd-mcp
 | `shruwd_list_entities` · `shruwd_add_competitor` · `shruwd_set_entity` · `shruwd_remove_entity` | The brand and its competitors, with the exact aliases that count as a mention. |
 | `shruwd_run_measurement` · `shruwd_list_cycles` | Measure now; watch the cycle. Results arrive over the following hours. |
 | `shruwd_get_visibility` · `shruwd_get_visibility_series` · `shruwd_get_crawlers` | Mention rate and share of voice with intervals, now and at every cycle close, per engine or every engine at once (`engine: "all"`); verified AI-crawler activity. |
+| `shruwd_list_crawler_pages` | Which pages AI crawlers read most, every bot added up, live retrieval apart from training. |
 | `shruwd_list_crawler_paths` | Which paths each crawler fetched and what it got: where a bot's errors came from. |
 | `shruwd_list_sources` | Which sites and pages the answers cite, and whose they are, for every question or one. |
 | `shruwd_list_answers` | The latest individual answers: whether the brand was named and at what rank, the competitors named, the pages cited. Narrows to one prompt (a finding's `subjectRef`) or one engine. Evidence, not a metric. |
