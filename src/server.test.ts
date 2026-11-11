@@ -115,7 +115,8 @@ describe('shruwd-mcp', () => {
     // A withheld share is not zero, and a share means less where few answers cite anything.
     expect(byName.get('shruwd_list_sources')).toContain('insufficient_data is not zero');
     expect(byName.get('shruwd_list_sources')).toContain('citingAny');
-    expect(byName.get('shruwd_transition_finding')).toContain('fourteen-day');
+    expect(byName.get('shruwd_transition_finding')).toContain('14 days, 30 for a listing');
+    expect(byName.get('shruwd_transition_finding')).toContain('Google has re-read the page');
     expect(byName.get('shruwd_transition_finding')).toContain('must be acknowledged before fix_applied');
     expect(byName.get('shruwd_run_measurement')).toContain('completes over the following day');
     // The first measurement counts only the competitors that exist when it

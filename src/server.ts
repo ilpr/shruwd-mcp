@@ -11,7 +11,7 @@
  * spec, so each one carries the rule the agent needs to use the tool well:
  * what `insufficient_data` means, why a short competitor name needs context
  * terms, that a measurement is asynchronous, that `fix_applied` starts a
- * fourteen-day clock it cannot shortcut.
+ * wait it cannot shortcut (14 days, 30 for a listing on someone else's page).
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -21,7 +21,7 @@ import { z } from 'zod';
 export const SERVER_NAME = 'shruwd';
 // Keep in step with the `version` in package.json and server.json: it is the
 // version the MCP client sees, and the one the API meters the call under.
-export const SERVER_VERSION = '0.1.13';
+export const SERVER_VERSION = '0.1.14';
 
 // ─── Shared input pieces ────────────────────────────────────────────────────
 
@@ -888,7 +888,9 @@ export function createShruwdMcpServer(shruwd: Shruwd): McpServer {
         'Moves a finding: "acknowledged" (seen), "fix_applied" (the recommended change is live), or ' +
         '"dismissed". Order matters: an open finding must be acknowledged before fix_applied, or the ' +
         'call is refused with 409 invalid_transition. fix_applied captures a baseline of the affected ' +
-        'prompts and starts a fourteen-day clock; a recheck then measures again, and the finding becomes ' +
+        'prompts and starts the wait: 14 days, 30 for a listing on someone else\'s page (the gatekeeper and ' +
+        'competitor findings), and a fix to a page of the brand\'s own site also waits until the change is ' +
+        'live and, with Search Console connected, Google has re-read the page. A recheck then measures again, and the finding becomes ' +
         '"resolved" ONLY if the movement gates pass (a significant change whose 95% interval excludes zero, ' +
         'and at least five points of change), else "not_moved", whose verdict says which outcome it was ' +
         '(rising but not proven, no change, fell, model changed, too few answers). ACCESS findings are ' +
