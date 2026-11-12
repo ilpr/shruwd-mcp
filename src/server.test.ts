@@ -312,4 +312,32 @@ describe('shruwd-mcp', () => {
     };
     expect(SERVER_VERSION).toBe(pkg.version);
   });
+
+  it('publishes the registry entry at the same version, linked to shruwd.io', async () => {
+    // server.json is what the MCP Registry lists, and what its readers (Notion's
+    // curated list, Glama, mcpservers.org) use to tie the server to a company:
+    // the title, the website and the icon. The limits are schema 2025-12-11's.
+    const read = async (file: string) => JSON.parse(await readFile(new URL(file, import.meta.url), 'utf8'));
+    const pkg = (await read('../package.json')) as { version: string };
+    const entry = (await read('../server.json')) as {
+      version: string;
+      title?: string;
+      websiteUrl?: string;
+      icons?: { src: string; mimeType?: string; sizes?: string[] }[];
+      packages: { version: string }[];
+    };
+
+    expect(entry.version).toBe(pkg.version);
+    expect(entry.packages[0]?.version).toBe(pkg.version);
+
+    expect(entry.title).toBe('Shruwd');
+    expect(entry.websiteUrl).toBe('https://shruwd.io');
+    expect(entry.icons?.length).toBeGreaterThan(0);
+    for (const icon of entry.icons ?? []) {
+      expect(icon.src).toMatch(/^https:\/\//);
+      expect(icon.src.length).toBeLessThanOrEqual(255);
+      expect(['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp']).toContain(icon.mimeType);
+      for (const size of icon.sizes ?? []) expect(size).toMatch(/^(\d+x\d+|any)$/);
+    }
+  });
 });
